@@ -29,9 +29,9 @@ DB_FILE = "vps_db.json"
 
 if not os.path.exists(CONFIG_FILE):
     default_config = {
-        "TOKEN": "YOUR_DISCORD_BOT_TOKEN_HERE",
+        "TOKEN": "MTU2NzI4Mjk3MjE5NjA4MTgxNQ.GHb1JB.kvELJwfxVhZ1Asg9hysRVBQc3hYObv2DbrZJqM",
         "PREFIX": "$",
-        "ADMIN_IDS": [],
+        "ADMIN_IDS": [1294386309019996200],
         "ANTINUKE_ENABLED": True,
         "DEFAULT_DATA_DIR": "./vps_data"
     }
