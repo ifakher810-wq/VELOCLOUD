@@ -6,8 +6,8 @@ on:
 
 jobs:
   velocloud:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
+    runs-on: ubuntu-latest
+    timeout-minutes: 999
 
     steps:
       - name: Create VELOCLOUD VPS
