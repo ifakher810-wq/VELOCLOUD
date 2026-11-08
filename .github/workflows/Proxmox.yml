@@ -1,5 +1,5 @@
 
-name: Proxmox VPS + Pinggy
+name: Proxmox + Pinggy
 
 on:
   workflow_dispatch:
@@ -10,59 +10,31 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Install Requirements
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openssh-client curl
-
-      - name: Pull Proxmox Image
-        run: |
-          docker pull rtedpro/proxmox:9.0.11
-
       - name: Start Proxmox
         run: |
-          docker run -d \
+          docker run -itd \
             --name proxmox \
             --hostname pve \
             --privileged \
             -p 8006:8006 \
             rtedpro/proxmox:9.0.11
 
-      - name: Wait for Proxmox
+      - name: Pinggy Temporary Tunnel
         run: |
-          echo "Waiting for Proxmox..."
+          while true; do
+            echo "================================"
+            echo "Creating New Pinggy Tunnel"
+            echo "================================"
 
-          for i in $(seq 1 36); do
-            if [ "$(docker inspect -f '{{.State.Running}}' proxmox)" != "true" ]; then
-              echo "Proxmox container stopped!"
-              docker logs proxmox
-              exit 1
-            fi
+            timeout 3600 ssh -tt \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -p 443 \
+              -R0:localhost:8006 \
+              qr+tcp@free.pinggy.io || true
 
-            CODE=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8006)
-
-            if [ "$CODE" != "000" ]; then
-              echo "Proxmox Web Interface Responding!"
-              break
-            fi
-
-            echo "Waiting... $i/36"
-            sleep 5
+            echo "Old Tunnel Closed"
+            echo "Creating New Tunnel..."
+            sleep 3
           done
-
-          docker ps -a
-          docker logs --tail 50 proxmox
-
-      - name: Start Pinggy Tunnel
-        run: |
-          echo "================================"
-          echo "PINGGY QR IS CREATING"
-          echo "================================"
-
-          ssh -tt \
-            -o StrictHostKeyChecking=no \
-            -o ExitOnForwardFailure=yes \
-            -o ServerAliveInterval=30 \
-            -p 443 \
-            -R0:localhost:8006 \
-            qr+tcp@free.pinggy.io
+          
