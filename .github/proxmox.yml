@@ -1,0 +1,69 @@
+
+name: Proxmox VPS + Pinggy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  proxmox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Install Requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-client curl
+
+      - name: Pull Proxmox Image
+        run: |
+          docker pull rtedpro/proxmox:9.0.11
+
+      - name: Start Proxmox
+        run: |
+          docker run -d \
+            --name proxmox \
+            --hostname pve \
+            --privileged \
+            -p 8006:8006 \
+            rtedpro/proxmox:9.0.11
+
+      - name: Wait for Proxmox
+        run: |
+          echo "Waiting for Proxmox..."
+
+          for i in $(seq 1 36); do
+            if [ "$(docker inspect -f '{{.State.Running}}' proxmox)" != "true" ]; then
+              echo "Proxmox container stopped!"
+              docker logs proxmox
+              exit 1
+            fi
+
+            CODE=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8006)
+
+            if [ "$CODE" != "000" ]; then
+              echo "Proxmox Web Interface Responding!"
+              break
+            fi
+
+            echo "Waiting... $i/36"
+            sleep 5
+          done
+
+          docker ps -a
+          docker logs --tail 50 proxmox
+
+      - name: Start Pinggy Tunnel
+        run: |
+          echo "================================"
+          echo "PINGGY QR IS CREATING"
+          echo "================================"
+
+          ssh -tt \
+            -o StrictHostKeyChecking=no \
+            -o ExitOnForwardFailure=yes \
+            -o ServerAliveInterval=30 \
+            -p 443 \
+            -R0:localhost:8006 \
+            qr+tcp@free.pinggy.io
+            
